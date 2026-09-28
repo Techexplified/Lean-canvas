@@ -805,13 +805,6 @@ export default function CanvasApp({ t }) {
             <span>Look</span>
           </button>
 
-          <button
-            className={`btn-header-attach ${isGenerated ? "is-primary" : "is-outline"}`}
-            onClick={handleAttach}
-          >
-            <i className="ti ti-paperclip" aria-hidden="true"></i>Attach
-          </button>
-
           {isLookPickerOpen && (
             <div className="lc-look-picker-popover">
               <div className="look-picker-label">Choose a look</div>
