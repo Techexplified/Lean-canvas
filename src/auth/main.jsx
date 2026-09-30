@@ -9,8 +9,8 @@ try {
   if (typeof TrelloPowerUp !== "undefined" && typeof TrelloPowerUp.iframe === "function") {
     t = TrelloPowerUp.iframe();
   }
-} catch (e) {
-  console.warn("TrelloPowerUp.iframe() not available in this context:", e);
+} catch (_) {
+  // Silent fallback for standalone browser context
 }
 
 // Fallback mock for local development and testing
@@ -27,11 +27,8 @@ if (!t) {
       return Promise.resolve();
     },
     sizeTo: () => Promise.resolve(),
-    closePopup: () => {
-      console.log("[Mock] t.closePopup() called");
-    },
+    closePopup: () => {},
     modal: (opts) => {
-      console.log("[Mock] t.modal() called with opts:", opts);
       if (opts && opts.url) {
         window.open(opts.url, "_blank");
       }

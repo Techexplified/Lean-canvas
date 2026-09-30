@@ -17,6 +17,9 @@ export default defineConfig({
       },
     },
   },
+  esbuild: {
+    drop: ["console", "debugger"],
+  },
   server: {
     port: 5173,
     cors: true,

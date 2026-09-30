@@ -8,18 +8,15 @@ try {
   if (typeof TrelloPowerUp !== "undefined" && typeof TrelloPowerUp.iframe === "function") {
     t = TrelloPowerUp.iframe();
   }
-} catch (e) {
-  console.warn("TrelloPowerUp.iframe() not available in this context:", e);
+} catch (_) {
+  // Silent fallback for standalone browser context
 }
 
 if (!t) {
   t = {
     get: () => Promise.resolve(null),
     set: () => Promise.resolve(),
-    closeModal: () => {
-      console.log("[Mock] t.closeModal() called");
-      alert("Modal closed (in Trello this returns to the board).");
-    },
+    closeModal: () => {},
   };
 }
 

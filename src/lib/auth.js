@@ -11,6 +11,8 @@ export const APP_NAME = "Link Canvas";
 // Shared message tag validated by authorized.js and AuthPopup.jsx
 export const AUTH_MESSAGE_SOURCE = "link-canvas-auth";
 
+import { safeTrelloGet, safeTrelloSet, safeTrelloRemove } from "./trelloStorage.js";
+
 const TOKEN_KEY = "token";
 
 /**
@@ -19,8 +21,7 @@ const TOKEN_KEY = "token";
  * @returns {Promise<string|null>}
  */
 export function getToken(t) {
-  if (!t || typeof t.get !== "function") return Promise.resolve(null);
-  return t.get("member", "private", TOKEN_KEY);
+  return safeTrelloGet(t, "member", "private", TOKEN_KEY);
 }
 
 /**
@@ -30,8 +31,7 @@ export function getToken(t) {
  * @returns {Promise<void>}
  */
 export function saveToken(t, token) {
-  if (!t || typeof t.set !== "function") return Promise.resolve();
-  return t.set("member", "private", TOKEN_KEY, token);
+  return safeTrelloSet(t, "member", "private", TOKEN_KEY, token);
 }
 
 /**
@@ -40,8 +40,7 @@ export function saveToken(t, token) {
  * @returns {Promise<void>}
  */
 export function clearToken(t) {
-  if (!t || typeof t.remove !== "function") return Promise.resolve();
-  return t.remove("member", "private", TOKEN_KEY);
+  return safeTrelloRemove(t, "member", "private", TOKEN_KEY);
 }
 
 /**
@@ -60,12 +59,6 @@ export async function isAuthorized(t) {
  * @returns {string} Complete authorization URL
  */
 export function buildAuthorizeUrl(returnUrl) {
-  if (!APP_KEY || APP_KEY === "your_trello_api_key_here") {
-    console.warn(
-      "[Link Canvas] VITE_TRELLO_APP_KEY is not configured in .env. Authorization will fail until a valid key is set."
-    );
-  }
-
   const params = new URLSearchParams({
     expiration: "never",
     name: APP_NAME,

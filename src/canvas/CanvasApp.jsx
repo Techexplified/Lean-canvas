@@ -5,6 +5,7 @@ import {
   regenerateSingleBoxAI
 } from "../lib/aiDraftService.js";
 import { createCardOnList } from "../lib/trelloApi.js";
+import { safeTrelloSet, safeTrelloGet } from "../lib/trelloStorage.js";
 
 // =========================================================================
 // ICONS (14px Lucide-style)
@@ -249,7 +250,15 @@ const DEFAULT_TRELLO_LISTS = [
 ];
 
 export default function CanvasApp({ t }) {
-  const [currentLook, setCurrentLook] = useState("rich");
+  const [currentLook, setCurrentLook] = useState(() => {
+    try {
+      const saved = localStorage.getItem("lc_member:private:lcLook");
+      if (saved && ["rich", "icon", "gradient"].includes(saved)) {
+        return saved;
+      }
+    } catch (_) {}
+    return "rich";
+  });
   const [isLookPickerOpen, setIsLookPickerOpen] = useState(false);
   const lookPickerRef = useRef(null);
 
@@ -293,59 +302,27 @@ export default function CanvasApp({ t }) {
       draftCount: dCount,
       boardCards: bCards || []
     };
-    try {
-      localStorage.setItem("lean_canvas_saved_state", JSON.stringify(payload));
-    } catch (e) {}
-
-    if (t && typeof t.set === "function") {
-      t.set("board", "shared", "leanCanvasData", payload).catch(() => {});
-    }
+    safeTrelloSet(t, "board", "shared", "leanCanvasData", payload, 250);
   }
 
   useEffect(() => {
-    // 1. Restore saved look preference
-    if (t && typeof t.get === "function") {
-      t.get("member", "private", "lcLook")
-        .then((savedLook) => {
-          if (savedLook && ["rich", "icon", "gradient"].includes(savedLook)) {
-            setCurrentLook(savedLook);
-          }
-        })
-        .catch(() => {});
-    }
+    // 1. Restore saved look preference from Trello member storage
+    safeTrelloGet(t, "member", "private", "lcLook").then((savedLook) => {
+      if (savedLook && ["rich", "icon", "gradient"].includes(savedLook)) {
+        setCurrentLook(savedLook);
+      }
+    });
 
     // 2. Restore saved Lean Canvas draft state (Trello storage first, localStorage fallback)
-    let loadedFromTrello = false;
-    if (t && typeof t.get === "function") {
-      t.get("board", "shared", "leanCanvasData")
-        .then((savedData) => {
-          if (savedData && savedData.activeCanvas) {
-            loadedFromTrello = true;
-            setActiveCanvas(savedData.activeCanvas);
-            setIsGenerated(!!savedData.isGenerated);
-            if (savedData.ideaPrompt) setIdeaPrompt(savedData.ideaPrompt);
-            if (typeof savedData.draftCount === "number") setDraftCount(savedData.draftCount);
-            if (Array.isArray(savedData.boardCards)) setBoardCards(savedData.boardCards);
-          }
-        })
-        .catch(() => {});
-    }
-
-    if (!loadedFromTrello) {
-      try {
-        const raw = localStorage.getItem("lean_canvas_saved_state");
-        if (raw) {
-          const saved = JSON.parse(raw);
-          if (saved && saved.activeCanvas) {
-            setActiveCanvas(saved.activeCanvas);
-            setIsGenerated(!!saved.isGenerated);
-            if (saved.ideaPrompt) setIdeaPrompt(saved.ideaPrompt);
-            if (typeof saved.draftCount === "number") setDraftCount(saved.draftCount);
-            if (Array.isArray(saved.boardCards)) setBoardCards(saved.boardCards);
-          }
-        }
-      } catch (e) {}
-    }
+    safeTrelloGet(t, "board", "shared", "leanCanvasData").then((savedData) => {
+      if (savedData && savedData.activeCanvas) {
+        setActiveCanvas(savedData.activeCanvas);
+        setIsGenerated(!!savedData.isGenerated);
+        if (savedData.ideaPrompt) setIdeaPrompt(savedData.ideaPrompt);
+        if (typeof savedData.draftCount === "number") setDraftCount(savedData.draftCount);
+        if (Array.isArray(savedData.boardCards)) setBoardCards(savedData.boardCards);
+      }
+    });
 
     // 3. Dynamically fetch actual Trello lists from current board
     if (t && typeof t.lists === "function") {
@@ -394,10 +371,9 @@ export default function CanvasApp({ t }) {
   }, [isLookPickerOpen, isToCardsModalOpen, isAiModalOpen]);
 
   function handleSelectLook(lookKey) {
+    if (!lookKey || lookKey === currentLook) return;
     setCurrentLook(lookKey);
-    if (t && typeof t.set === "function") {
-      t.set("member", "private", "lcLook", lookKey).catch(() => {});
-    }
+    safeTrelloSet(t, "member", "private", "lcLook", lookKey, 200);
   }
 
   function showToast(msg) {
@@ -631,13 +607,9 @@ export default function CanvasApp({ t }) {
   }
 
   function handleAttach() {
-    if (t && typeof t.set === "function") {
-      t.set("card", "shared", "leanCanvas", isGenerated ? activeCanvas : null)
-        .then(() => showToast("📎 Attached Lean Canvas to current Trello card!"))
-        .catch(() => showToast("📎 Attached to card!"));
-    } else {
-      showToast("📎 Attached to card!");
-    }
+    safeTrelloSet(t, "card", "shared", "leanCanvas", isGenerated ? activeCanvas : null)
+      .then(() => showToast("📎 Attached Lean Canvas to current Trello card!"))
+      .catch(() => showToast("📎 Attached to card!"));
   }
 
   function handleBoxClick(boxKey) {
